@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 
@@ -10,7 +11,7 @@ if str(ROOT_DIR) not in sys.path:
 from server.main import recommend_movies
 from src.logger import setup_logger
 
-logger = setup_logger("movie_recommender", level=flask.logging.DEBUG)
+logger = setup_logger("movie_recommender", level=logging.INFO)
 
 app = flask.Flask(__name__, static_folder="../static", template_folder="../static")
 
@@ -25,9 +26,9 @@ def get_recommendations():
     data = flask.request.get_json()
     movie_name = data.get("movie_name", "")
     top_n = data.get("top_n", 5)
-    logger.debug(f"Received request for recommendations for '{movie_name}' with top_n={top_n}")
+    logger.info(f"Received request for recommendations for '{movie_name}' with top_n={top_n}")
     recommendations = recommend_movies(movie_name, top_n)
-    logger.debug(f"Returning recommendations: {recommendations}")
+    logger.info(f"Returning recommendations: {recommendations}")
     return flask.jsonify(recommendations)
 
 
