@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineMatch — AI Movie Recommender</title>
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at top left, #1a1c2e, #0f1015 60%, #050508);
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-hover: rgba(255, 255, 255, 0.06);
+      --accent-gradient: linear-gradient(135deg, #ff4b1f, #ff9068);
+      --accent-glow: rgba(255, 75, 31, 0.35);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --card-radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+      overflow-x: hidden;
+    }
+
+    /* Subtle ambient background glow */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 800px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Header Styling */
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 75, 31, 0.1);
+      border: 1px solid rgba(255, 75, 31, 0.3);
+      color: #ff9068;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Input & Search Section */
+    .search-box {
+      display: flex;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 8px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: rgba(255, 144, 104, 0.5);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      position: absolute;
+      left: 16px;
+      color: var(--text-muted);
+      width: 20px;
+      height: 20px;
+    }
+
+    input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 14px 14px 14px 48px;
+      font-size: 1rem;
+      color: var(--text-main);
+      font-family: inherit;
+    }
+
+    input::placeholder {
+      color: var(--text-muted);
+    }
+
+    button {
+      background: var(--accent-gradient);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 14px 28px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      box-shadow: 0 8px 20px var(--accent-glow);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px var(--accent-glow);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Results List */
+    #results {
+      margin-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .movie-card {
+      display: flex;
+      gap: 20px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--card-radius);
+      padding: 16px;
+      align-items: center;
+      transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+      animation: fadeIn 0.4s ease forwards;
+    }
+
+    .movie-card:hover {
+      background: var(--glass-hover);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-3px);
+    }
+
+    .movie-poster-placeholder {
+      width: 64px;
+      height: 90px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      border: 1px dashed var(--glass-border);
+    }
+
+    .movie-info {
+      flex: 1;
+    }
+
+    .movie-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+
+    .movie-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .tag {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    /* Status State Views */
+    .state-container {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+
+    .state-container i {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      stroke-width: 1.5;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #ff9068;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .search-box {
+        flex-direction: column;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .input-wrapper {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+      }
+
+      button {
+        justify-content: center;
+        width: 100%;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo-badge">
+        <i data-lucide="sparkles"></i> AI-Powered Discovery
+      </div>
+      <h1>Find Your Next Watch</h1>
+      <p class="subtitle">Enter a movie you love and we'll handle the rest.</p>
+    </header>
+
+    <div class="search-box">
+      <div class="input-wrapper">
+        <i data-lucide="film"></i>
+        <input id="movieInput" placeholder="e.g. Inception, Interstellar, The Matrix..." onkeypress="handleKeyPress(event)" />
+      </div>
+      <button id="searchBtn" onclick="getRecommendations()">
+        <span>Discover</span>
+        <i data-lucide="arrow-right"></i>
+      </button>
+    </div>
+
+    <div id="results">
+      <!-- Default Empty State -->
+      <div class="state-container">
+        <i data-lucide="clapperboard"></i>
+        <p>Your recommendations will appear here.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') {
+        getRecommendations();
+      }
+    }
+
+    async function getRecommendations() {
+      const movieInput = document.getElementById('movieInput');
+      const movieName = movieInput.value.trim();
+      const resultsDiv = document.getElementById('results');
+      const searchBtn = document.getElementById('searchBtn');
+
+      if (!movieName) return;
+
+      // Disable inputs while fetching
+      searchBtn.disabled = true;
+      movieInput.disabled = true;
+
+      // Loading State
+      resultsDiv.innerHTML = `
+        <div class="state-container">
+          <div class="spinner"></div>
+          <p>Scanning the cinema universe...</p>
+        </div>
+      `;
+
+      try {
+        const response = await fetch('/api/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ movie_name: movieName, top_n: 5 })
+        });
+
+        const data = await response.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          resultsDiv.innerHTML = `
+            <div class="state-container">
+              <i data-lucide="frown"></i>
+              <p>No recommendations found for "${movieName}". Try another title!</p>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        // Handle both simple strings ["Movie A", "Movie B"] and object payloads [{ title: "Movie A", genre: "Sci-Fi" }]
+        resultsDiv.innerHTML = data.map((item, index) => {
+          const title = typeof item === 'string' ? item : item.title || item.movie_name;
+          const genre = item.genre || 'Match';
+
+          return `
+            <div class="movie-card" style="animation-delay: ${index * 0.08}s">
+              <div class="movie-poster-placeholder">
+                <i data-lucide="popcorn"></i>
+              </div>
+              <div class="movie-info">
+                <div class="movie-title">${title}</div>
+                <div class="movie-meta">
+                  <span class="tag">${genre}</span>
+                  <span><i data-lucide="star" style="width:14px; height:14px; fill:#ff9068; color:#ff9068; vertical-align:-2px;"></i> Top Recommendation</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Refresh icons for dynamically inserted cards
+        lucide.createIcons();
+
+      } catch (error) {
+        resultsDiv.innerHTML = `
+          <div class="state-container">
+            <i data-lucide="alert-circle"></i>
+            <p>Something went wrong. Please check your backend connection.</p>
+          </div>
+        `;
+        lucide.createIcons();
+      } finally {
+        searchBtn.disabled = false;
+        movieInput.disabled = false;
+        movieInput.focus();
+      }
+    }
+  </script>
+</body>
+</html>
